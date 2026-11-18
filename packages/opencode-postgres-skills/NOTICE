@@ -1,0 +1,13 @@
+@opencode-postgres-skills
+Copyright 2026 the opencode-plugins authors
+
+This product includes software developed by Microsoft Corporation
+(https://github.com/microsoft/postgres-skills), licensed under the MIT
+License. The vendored content under vendor/postgres-skills is reproduced
+unchanged from that project.
+
+The local MCP server this plugin runs is the separate npm package
+@microsoft/postgres-mcp, which carries its own MIT license.
+
+@opencode-postgres-skills is an unofficial port and is not affiliated with or
+endorsed by Microsoft.

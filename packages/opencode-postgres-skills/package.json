@@ -1,0 +1,40 @@
+{
+  "name": "@giljae/opencode-postgres-skills",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Unofficial OpenCode V2 plugin distribution of microsoft/postgres-skills: PostgreSQL guidance, graph workflows, and a local Postgres MCP server.",
+  "homepage": "https://github.com/giljae/opencode-plugins/tree/main/packages/opencode-postgres-skills",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/giljae/opencode-plugins.git",
+    "directory": "packages/opencode-postgres-skills"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "vendor",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@microsoft/postgres-mcp": "0.3.0",
+    "@opencode/plugin": "2.0.11"
+  },
+  "postgresSkills": {
+    "upstream": {}
+  }
+}

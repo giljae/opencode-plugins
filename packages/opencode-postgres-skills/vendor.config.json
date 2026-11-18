@@ -1,0 +1,17 @@
+{
+  "upstream": {
+    "repo": "https://github.com/microsoft/postgres-skills",
+    "trigger": "versionFile",
+    "branch": "main",
+    "versionFile": "plugin/plugin.json"
+  },
+  "include": [
+    { "from": "plugin/skills", "to": "skills" },
+    { "from": "plugin/MIGRATION.md", "to": "MIGRATION.md" },
+    { "from": "plugin/SETUP.md", "to": "SETUP.md" },
+    { "from": "LICENSE", "to": "LICENSE" }
+  ],
+  "exclude": [],
+  "dest": "vendor/postgres-skills",
+  "manifestField": "postgresSkills"
+}
