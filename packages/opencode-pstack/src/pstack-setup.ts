@@ -93,7 +93,11 @@ export async function registerSetupCommand(
             text: `Wrote ${written.length} pstack agent files and updated ${options.mapPath}.`,
           });
         } else {
-          writeModelMap(options.mapPath, renderTemplate());
+          // Only create the template the first time; never clobber a map the
+          // user has already started editing.
+          if (!existsSync(options.mapPath)) {
+            writeModelMap(options.mapPath, renderTemplate());
+          }
           await host.session.prompt({
             ...prompt,
             sessionID,

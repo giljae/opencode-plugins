@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
 
+import type { CommandDefinition, CommandHost, ModelHost } from "../src/host.ts";
 import { ROLES, type RoleModelMap } from "../src/models.ts";
-import { applySetup, missingRoles, planSetup } from "../src/pstack-setup.ts";
+import { applySetup, missingRoles, planSetup, registerSetupCommand } from "../src/pstack-setup.ts";
 
 const dirs: string[] = [];
 
@@ -89,5 +90,35 @@ describe("applySetup", () => {
         },
       ),
     ).toThrow(/No model chosen/);
+  });
+});
+
+describe("the setup command", () => {
+  test("a re-run keeps an existing partial map instead of overwriting it", async () => {
+    const dir = workdir();
+    const mapPath = join(dir, ".opencode", "pstack-models.md");
+    mkdirSync(dirname(mapPath), { recursive: true });
+    writeFileSync(mapPath, "swarm workers: provider-a/model-b\n");
+
+    const commands: CommandDefinition[] = [];
+    const host = {
+      command: {
+        transform: async (cb: (editor: { add(command: CommandDefinition): void }) => void) => {
+          cb({ add: (command) => commands.push(command) });
+        },
+      },
+      session: { prompt: async () => {} },
+      model: { list: async () => [{ provider: "provider-a", id: "model-b" }] },
+    } as unknown as CommandHost & ModelHost;
+
+    await registerSetupCommand(host, {
+      bundleDir: fixtureBundle(),
+      targetDir: join(dir, "agents"),
+      mapPath,
+    });
+    const setup = commands.find((command) => command.name === "pstack-setup");
+    await setup?.execute({ sessionID: "s", prompt: { text: "" }, delivery: "queue" });
+
+    expect(readFileSync(mapPath, "utf8")).toContain("swarm workers: provider-a/model-b");
   });
 });
