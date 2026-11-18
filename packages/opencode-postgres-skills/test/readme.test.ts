@@ -33,4 +33,10 @@ describe("package README", () => {
     expect(readme).toContain("MIT");
     expect(readme.toLowerCase()).toMatch(/not affiliated with.*endorsed by microsoft/);
   });
+
+  test("explains what postgres-skills is and how to use it", () => {
+    expect(readme.toLowerCase()).toContain("what is");
+    expect(readme).toMatch(/1\./);
+    expect(readme).toMatch(/2\./);
+  });
 });

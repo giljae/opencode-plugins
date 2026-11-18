@@ -2,20 +2,22 @@
 
 An **unofficial port** of
 [microsoft/postgres-skills](https://github.com/microsoft/postgres-skills) for
-[OpenCode](https://opencode.ai). It gives your agent PostgreSQL guidance, Apache
-AGE graph workflows, Oracle application migration, and a **local PostgreSQL MCP
-server** for inspecting and querying databases.
-
-This package is not affiliated with Microsoft and is not endorsed by Microsoft.
-The skill, reference, script, and document content under `vendor/postgres-skills`
-is reproduced unchanged from upstream (MIT); see `NOTICE`.
+[OpenCode](https://opencode.ai).
 
 Published on npm:
 [`@giljae/opencode-postgres-skills`](https://www.npmjs.com/package/@giljae/opencode-postgres-skills).
+This package is not affiliated with Microsoft and is not endorsed by Microsoft.
+The content under `vendor/postgres-skills` is reproduced unchanged from upstream
+(MIT); see `NOTICE`.
 
-## What you get
+## What is postgres-skills?
 
-Three skills, offered to the agent automatically:
+It teaches your agent how to work with PostgreSQL well, and gives it a live
+**database tool** to look before it speaks. Instead of pasting schema and query
+plans into the prompt by hand, the agent can inspect the selected database and
+ground its answer in what is actually there.
+
+It is three skills plus a local PostgreSQL MCP server:
 
 | Skill | What it covers |
 |-------|----------------|
@@ -23,32 +25,44 @@ Three skills, offered to the agent automatically:
 | `pg-graph` | Apache AGE on PostgreSQL: derive an ontology, build a graph, and query it with openCypher or natural language. |
 | `migrate-oracle-app` | Assess and convert an Oracle-backed application to PostgreSQL. Needs Oracle, Java, and Maven tooling for real use. |
 
-Plus a **local `postgres-mcp` server**. The plugin registers it through the
-OpenCode MCP API, so you edit no configuration. It is enabled by default and
-starts a local process in each session, which the skills use to inspect the live
-database.
+## What this plugin adds
+
+- The three skills above, available to the agent automatically.
+- A local **`postgres-mcp`** server, registered by the plugin, so you edit no
+  configuration. It is enabled by default and starts a local process in each
+  session.
 
 The MCP server is the separate npm package `@microsoft/postgres-mcp`, pinned as
-a dependency of this plugin and launched from the local install with
-`node …/bin/postgres-mcp.js`. **It needs no network at runtime**, so the plugin
-works in air-gapped environments. (Connecting to a remote database is still a
-network operation.)
+a dependency of this plugin and launched from the local install. **It needs no
+network at runtime**, so the plugin works in air-gapped environments. (Reaching
+a remote database is still a network operation.)
 
-## Requirements
+## Before you start
 
-- OpenCode V2. Verified against **OpenCode 2.0.11**. A newer V2 host should work
-  but is untested.
-- **Node 22** or newer. The MCP server and the skills' scripts require it.
+- OpenCode V2 (this was built and checked against OpenCode 2.0.11).
+- **Node 22** or newer — the MCP server and the skills' scripts require it.
 
 ## Install
+
+**1. Add the plugin.**
 
 ```sh
 opencode plugin add @giljae/opencode-postgres-skills
 ```
 
-`opencode plugin add` fetches the package from the npm registry and adds it to
-your OpenCode configuration. Start a new session and the three skills and the
-`postgres-mcp` server are available.
+**2. Start a new session.**
+
+The three skills and the `postgres-mcp` server are available right away. There
+is nothing else to configure.
+
+## Everyday use
+
+Just describe what you want; the agent picks the right skill, or name one:
+
+- "Why is this query slow?" → it inspects the plan with the MCP server.
+- "Add row-level security for tenant isolation."
+- "Design a pgvector index for hybrid search."
+- "Convert this Oracle schema" → the `migrate-oracle-app` skill.
 
 ## Upstream
 
@@ -58,11 +72,11 @@ scheduled workflow re-syncs and republishes when upstream bumps that version.
 
 ## Verification status
 
-What has been checked on a real OpenCode is recorded in the source repository at
+What was checked on a real OpenCode is recorded in the source repository at
 `docs/verification/opencode-postgres-skills-spike.md`. In short: the plugin
-loads and registers the skills, and the MCP server connects with 13 tools.
-Skill loading, OpenCode's exposed MCP tool names, and script execution are not
-yet verified. Treat anything not recorded there as unverified.
+loads, the MCP server connects with 13 tools, and the npm install path is
+verified. Skill loading, the exposed MCP tool names, and script execution are
+not yet verified. Treat anything not recorded there as unverified.
 
 ## License
 

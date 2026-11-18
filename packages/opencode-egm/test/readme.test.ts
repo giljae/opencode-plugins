@@ -30,4 +30,11 @@ describe("package README", () => {
     expect(readme).toContain(manifest.ref);
     expect(readme).toContain("2.0.11");
   });
+
+  test("explains what EGM is and how to use it", () => {
+    expect(readme.toLowerCase()).toContain("what is egm");
+    expect(readme).toContain("/egm-review");
+    expect(readme).toMatch(/1\./);
+    expect(readme).toMatch(/2\./);
+  });
 });
