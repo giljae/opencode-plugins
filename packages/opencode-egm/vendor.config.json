@@ -1,0 +1,17 @@
+{
+  "upstream": {
+    "repo": "https://github.com/google/elephant-goldfish-model",
+    "trigger": "release",
+    "tagPrefix": "v"
+  },
+  "include": [
+    { "from": "agents", "to": "agents" },
+    { "from": "skills", "to": "skills" },
+    { "from": "resources", "to": "resources" },
+    { "from": "docs", "to": "docs" },
+    { "from": "LICENSE", "to": "LICENSE" }
+  ],
+  "exclude": ["docs/site", "docs/designs", "docs/opencode.md"],
+  "dest": "vendor/egm",
+  "manifestField": "egm"
+}

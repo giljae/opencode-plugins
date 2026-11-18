@@ -2,6 +2,7 @@
   "repo": "https://github.com/google/elephant-goldfish-model",
   "ref": "v0.1.1",
   "commit": "dea7761de06ce5b51c177ebb9bba0469f24af5a4",
+  "version": "0.1.1",
   "fetchedAt": "2026-11-06T16:47:05-05:00",
   "files": {
     "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",

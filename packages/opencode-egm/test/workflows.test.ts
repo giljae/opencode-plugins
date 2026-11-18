@@ -52,7 +52,7 @@ describe("upstream-sync.yml", () => {
   test("syncs the latest upstream tag and tests before publishing", () => {
     const joined = allRuns(sync);
     expect(joined).toContain("releases/latest");
-    expect(joined).toContain("scripts/sync-upstream.mjs");
+    expect(joined).toContain("scripts/sync.mjs");
     expect(joined).toContain("npm test");
     expect(joined).toContain("npm publish");
   });

@@ -15,6 +15,7 @@ interface Manifest {
   repo: string;
   ref: string;
   commit: string;
+  version: string;
   files: Record<string, string>;
 }
 
@@ -39,9 +40,10 @@ describe("vendored EGM tree", () => {
   test("records a pinned release tag in the package manifest", () => {
     const pkg = JSON.parse(
       readFileSync(join(packageRoot, "package.json"), "utf8"),
-    ) as { egm: { upstream: { tag: string; commit: string } } };
-    expect(pkg.egm.upstream.tag).toBe(manifest.ref);
+    ) as { egm: { upstream: { ref: string; commit: string; version: string } } };
+    expect(pkg.egm.upstream.ref).toBe(manifest.ref);
     expect(pkg.egm.upstream.commit).toBe(manifest.commit);
+    expect(pkg.egm.upstream.version).toBe(manifest.version);
     expect(manifest.ref).toMatch(/^v\d+\.\d+\.\d+$/);
   });
 });

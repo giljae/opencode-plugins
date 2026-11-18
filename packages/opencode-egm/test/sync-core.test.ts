@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -7,7 +7,7 @@ import { afterEach, describe, expect, test } from "vitest";
 
 // Plain JS helper without type declarations.
 // @ts-expect-error see scripts/lib/sync-core.mjs
-import { buildManifest, listFiles, sha256File, verifyVendored } from "../../../scripts/lib/sync-core.mjs";
+import { applyInclude, buildIncludePlan, buildManifest, listFiles, parseVersion, sha256File, verifyVendored } from "../../../scripts/lib/sync-core.mjs";
 
 const dirs: string[] = [];
 
@@ -90,5 +90,41 @@ describe("sync-core", () => {
     });
     writeFileSync(join(dir, "UPSTREAM.json"), "{}");
     expect(verifyVendored(dir, manifest)).toEqual([]);
+  });
+
+  test("parseVersion reads the version field and rejects malformed input", () => {
+    expect(parseVersion('{"name":"x","version":"0.3.0"}')).toBe("0.3.0");
+    expect(() => parseVersion("{}")).toThrow(/version/i);
+    expect(() => parseVersion("not json")).toThrow();
+  });
+
+  test("buildIncludePlan returns the configured include list", () => {
+    expect(buildIncludePlan({ include: [{ from: "plugin/skills", to: "skills" }] })).toEqual([
+      { from: "plugin/skills", to: "skills" },
+    ]);
+    expect(() => buildIncludePlan({ include: [] })).toThrow(/include/i);
+  });
+
+  test("applyInclude maps source paths into the destination and hashes them", () => {
+    const source = fixture();
+    mkdirSync(join(source, "pkg", "skills", "a"), { recursive: true });
+    writeFileSync(join(source, "pkg", "skills", "a", "SKILL.md"), "body");
+    mkdirSync(join(source, "pkg", "docs", "site"), { recursive: true });
+    writeFileSync(join(source, "pkg", "docs", "site", "x.md"), "skip");
+    const dest = join(fixture(), "vendor");
+
+    const files = applyInclude(source, dest, [{ from: "pkg/skills", to: "skills" }], [
+      "pkg/docs/site",
+    ]);
+
+    expect(readFileSync(join(dest, "skills/a/SKILL.md"), "utf8")).toBe("body");
+    expect(Object.keys(files)).toEqual(["skills/a/SKILL.md"]);
+  });
+
+  test("applyInclude throws when an included source path is missing", () => {
+    const source = fixture();
+    expect(() =>
+      applyInclude(source, join(fixture(), "vendor"), [{ from: "nope", to: "nope" }], []),
+    ).toThrow(/nope/);
   });
 });

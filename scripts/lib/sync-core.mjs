@@ -1,15 +1,16 @@
-// Pure helpers for vendoring google/elephant-goldfish-model at a pinned ref.
-// No network access here; the CLI in ../sync-upstream.mjs does the I/O.
+// Pure helpers for vendoring an upstream repository at a pinned ref.
+// No network access here; the CLI in ../sync.mjs does the I/O.
 
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
-
-/** Top-level upstream paths copied into the vendor tree. */
-export const WHITELIST = ["agents", "skills", "resources", "docs", "LICENSE"];
-
-/** Paths under a whitelisted entry that are not part of the runtime content. */
-export const EXCLUDE = ["docs/site", "docs/designs", "docs/opencode.md"];
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 
 /** Our own provenance file; never part of the upstream manifest. */
 export const MANIFEST_FILE = "UPSTREAM.json";
@@ -20,10 +21,10 @@ export function sha256File(filePath) {
 }
 
 /**
- * @param {{ repo: string; ref: string; commit: string; fetchedAt: string;
- *           files: Record<string, string> }} input
- * @returns {{ repo: string; ref: string; commit: string; fetchedAt: string;
- *             files: Record<string, string> }}
+ * @param {{ repo: string; ref: string; commit: string; version?: string;
+ *           fetchedAt: string; files: Record<string, string> }} input
+ * @returns {{ repo: string; ref: string; commit: string; version: string;
+ *             fetchedAt: string; files: Record<string, string> }}
  */
 export function buildManifest(input) {
   const files = {};
@@ -34,6 +35,7 @@ export function buildManifest(input) {
     repo: input.repo,
     ref: input.ref,
     commit: input.commit,
+    version: input.version ?? "",
     fetchedAt: input.fetchedAt,
     files,
   };
@@ -84,21 +86,85 @@ export function verifyVendored(vendorDir, manifest) {
   return problems.sort();
 }
 
-/** True when `rel` (POSIX, relative to a vendored entry root) is excluded. */
-export function isExcluded(rel) {
-  return EXCLUDE.some((prefix) => rel === prefix || rel.startsWith(`${prefix}/`));
+/** True when `rel` (POSIX, relative to the source root) is excluded. */
+export function isExcluded(rel, exclude) {
+  return exclude.some((prefix) => rel === prefix || rel.startsWith(`${prefix}/`));
 }
 
-/** True when the directory entry `name` is excluded from the whitelist. */
-export function isExcludedTopLevel(name) {
-  return EXCLUDE.some((prefix) => prefix === name || prefix.startsWith(`${name}/`));
-}
-
-/** @param {string} dir @returns {boolean} */
-export function isDirectory(dir) {
+/** @param {string} jsonText @returns {string} the `version` field, or throws. */
+export function parseVersion(jsonText) {
+  let parsed;
   try {
-    return statSync(dir).isDirectory();
-  } catch {
-    return false;
+    parsed = JSON.parse(jsonText);
+  } catch (error) {
+    throw new Error(`Malformed version file: ${error.message}`);
   }
+  if (!parsed || typeof parsed.version !== "string" || parsed.version.length === 0) {
+    throw new Error("Version file has no version field");
+  }
+  return parsed.version;
+}
+
+/** @param {{ include?: { from: string; to: string }[] }} config */
+export function buildIncludePlan(config) {
+  if (!Array.isArray(config.include) || config.include.length === 0) {
+    throw new Error("Vendor config has no include entries");
+  }
+  return config.include.map((entry) => ({ from: entry.from, to: entry.to }));
+}
+
+/** @param {string} packageDir @returns {import("./sync-core.mjs").VendorConfig} */
+export function loadVendorConfig(packageDir) {
+  const path = join(packageDir, "vendor.config.json");
+  if (!existsSync(path)) {
+    throw new Error(`Missing vendor.config.json: ${path}`);
+  }
+  const raw = JSON.parse(readFileSync(path, "utf8"));
+  const upstream = raw.upstream ?? {};
+  if (!upstream.repo || !upstream.trigger) {
+    throw new Error(`vendor.config.json needs upstream.repo and upstream.trigger: ${path}`);
+  }
+  if (upstream.trigger === "release" && !upstream.tagPrefix) {
+    throw new Error(`release trigger needs upstream.tagPrefix: ${path}`);
+  }
+  if (upstream.trigger === "versionFile" && !upstream.versionFile) {
+    throw new Error(`versionFile trigger needs upstream.versionFile: ${path}`);
+  }
+  if (!raw.dest || !raw.manifestField) {
+    throw new Error(`vendor.config.json needs dest and manifestField: ${path}`);
+  }
+  return {
+    upstream,
+    include: buildIncludePlan(raw),
+    exclude: Array.isArray(raw.exclude) ? raw.exclude : [],
+    dest: raw.dest,
+    manifestField: raw.manifestField,
+  };
+}
+
+/**
+ * Regenerate `dest` from the mapped include entries and return the file hashes.
+ * @returns {Record<string, string>}
+ */
+export function applyInclude(sourceRoot, dest, include, exclude) {
+  rmSync(dest, { recursive: true, force: true });
+  mkdirSync(dest, { recursive: true });
+  for (const entry of include) {
+    const source = join(sourceRoot, entry.from);
+    if (!existsSync(source)) {
+      throw new Error(`Missing included path: ${entry.from}`);
+    }
+    mkdirSync(dirname(join(dest, entry.to)), { recursive: true });
+    cpSync(source, join(dest, entry.to), {
+      recursive: true,
+      filter: (candidate) =>
+        !isExcluded(relative(sourceRoot, candidate).split(sep).join("/"), exclude),
+    });
+  }
+  const files = {};
+  for (const rel of listFiles(dest)) {
+    if (rel === MANIFEST_FILE) continue;
+    files[rel] = sha256File(join(dest, rel));
+  }
+  return files;
 }

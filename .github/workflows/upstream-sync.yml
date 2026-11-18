@@ -44,7 +44,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag=$(gh api repos/google/elephant-goldfish-model/releases/latest --jq .tag_name)
-          current=$(node -p "require('./packages/opencode-egm/package.json').egm.upstream.tag")
+          current=$(node -p "require('./packages/opencode-egm/package.json').egm.upstream.ref ?? ''")
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "current=$current" >> "$GITHUB_OUTPUT"
           if [ "$tag" != "$current" ] || [ "${{ inputs.test_publish }}" = "true" ]; then
@@ -59,7 +59,7 @@ jobs:
 
       - name: Sync the vendored content
         if: steps.upstream.outputs.changed == 'true' && inputs.test_publish != true
-        run: node scripts/sync-upstream.mjs --ref ${{ steps.upstream.outputs.tag }}
+        run: node scripts/sync.mjs --plugin packages/opencode-egm
 
       - name: Test before publishing
         if: steps.upstream.outputs.changed == 'true'
