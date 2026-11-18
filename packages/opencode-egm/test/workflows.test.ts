@@ -45,4 +45,27 @@ describe("upstream-sync.yml (shared by every plugin)", () => {
     expect(JSON.stringify(sync)).not.toContain("@giljae/opencode-egm");
     expect(JSON.stringify(sync)).not.toContain("@giljae/opencode-postgres-skills");
   });
+
+  test("uses Node 22 (the postgres package requires it)", () => {
+    expect(JSON.stringify(sync)).toContain('"node-version":22');
+  });
+});
+
+describe("ci.yml", () => {
+  const ci = parse(
+    readFileSync(join(root, ".github/workflows/ci.yml"), "utf8"),
+  ) as Workflow;
+
+  test("runs on pull requests and pushes, and installs, typechecks, and tests", () => {
+    expect(ci.on).toHaveProperty("pull_request");
+    expect(ci.on).toHaveProperty("push");
+    const ciRuns = (ci.jobs?.test?.steps ?? []).map((step) => step.run ?? "").join("\n");
+    expect(ciRuns).toContain("npm ci");
+    expect(ciRuns).toContain("npm run typecheck");
+    expect(ciRuns).toContain("npm test");
+  });
+
+  test("uses Node 22", () => {
+    expect(JSON.stringify(ci)).toContain('"node-version":22');
+  });
 });

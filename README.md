@@ -23,9 +23,10 @@ New plugins are added to this table as they land.
 packages/
   <plugin>/            one publishable OpenCode plugin per directory
 scripts/
-  sync-upstream.mjs    vendor an upstream release tag with provenance
-  lib/sync-core.mjs    hashing and drift helpers
-  verify-plugin.mjs    offline check: agents discovered, reviewers read-only
+  sync.mjs             vendor one plugin's upstream with provenance (--check, --force)
+  upstream-status.mjs  report which plugins have upstream changes
+  lib/sync-core.mjs    hashing, vendor-config, and drift helpers
+  verify-plugin.mjs    offline EGM check: agents discovered, reviewers read-only
 docs/
   superpowers/         design and implementation notes
   verification/        what was verified on a real OpenCode, and what was not

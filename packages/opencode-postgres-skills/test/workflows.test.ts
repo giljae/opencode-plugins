@@ -45,4 +45,8 @@ describe("upstream-sync.yml", () => {
     expect(JSON.stringify(sync)).not.toContain("@giljae/opencode-egm");
     expect(JSON.stringify(sync)).not.toContain("@giljae/opencode-postgres-skills");
   });
+
+  test("uses Node 22", () => {
+    expect(JSON.stringify(sync)).toContain('"node-version":22');
+  });
 });
