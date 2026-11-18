@@ -1,0 +1,32 @@
+{
+  "name": "@giljae/opencode-egm",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Unofficial OpenCode V2 plugin distribution of the Elephant-Goldfish Model workflow.",
+  "homepage": "https://github.com/google/elephant-goldfish-model",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "vendor",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opencode/plugin": "2.0.11"
+  },
+  "egm": {
+    "upstream": {
+      "repo": "https://github.com/google/elephant-goldfish-model",
+      "tag": "",
+      "commit": ""
+    }
+  }
+}
