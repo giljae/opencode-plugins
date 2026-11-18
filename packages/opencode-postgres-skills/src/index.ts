@@ -1,1 +1,12 @@
-export {};
+import { Plugin } from "@opencode/plugin";
+
+import { defaultBundleDir, runSetup, type Host } from "./setup.ts";
+
+export default Plugin.define({
+  id: "postgres-skills",
+  async setup(ctx) {
+    // Our Host is the structural subset we call; the real context carries
+    // branded schema types, so cast at this single boundary.
+    await runSetup(ctx as unknown as Host, defaultBundleDir());
+  },
+});
