@@ -2,8 +2,8 @@
 
 Date: 2026-11-18
 Environment: OpenCode 2.0.11 (macOS, Node 24.20.0), `@opencode/plugin` 2.0.11,
-isolated XDG profile under a temporary directory, no model calls (the test
-account's free usage limit was reached, and no paid model was authorized).
+isolated XDG profile for the offline checks, and a live run on the
+`cline-pass/baidu/ernie-5.5-flash-preview:free` model.
 
 ## Method
 
@@ -17,12 +17,38 @@ account's free usage limit was reached, and no paid model was authorized).
 
 | # | Item | Result | Evidence |
 |---|------|--------|----------|
-| 1 | Directory-form skill exposes `references/` and its base dir | **unverified** | Needs a model session to load a skill. |
-| 2 | Wildcard deny then specific allows enforced on subagents | **partial** | `debug agents` shows our reviewer rules appended after OpenCode's built-in defaults, so last-match-wins yields read-only; runtime enforcement not exercised. |
-| 3 | Nine agent files are discovered; orchestrator addresses subagents by id | **pass** | `debug agents` lists `egm` (primary) and the eight reviewers (subagent) with the generated system prompts. |
-| 4 | `external_directory` behavior for the installed package | **unverified** | Not exercised. |
-| 5 | No V1 `task` wording reaches the agent | **pass** | The generated orchestrator prompt contains `subagent` and no `task` tool name. |
+| 1 | Directory-form skill loads and exposes its base dir | **pass** | In a live run the `egm` agent loaded the `egm-review` skill and followed its instructions. |
+| 2 | Wildcard deny then specific allows enforced on subagents | **partial** | `debug agents` shows our reviewer rules appended after OpenCode's built-in defaults, so last-match-wins yields read-only; reviewers were dispatched live, but a denied call was not captured. |
+| 3 | Nine agent files are discovered; orchestrator addresses subagents by id | **pass** | `debug agents` lists `egm` (primary) and the eight reviewers (subagent); a live run dispatched seven reviewer subagents by id. |
+| 4 | `external_directory` behavior for the installed package | **pass** | The orchestrator read bundled docs from the package with no prompt. |
+| 5 | No V1 `task` wording reaches the agent | **partial** | The orchestrator prompt has no `task`, but the vendored `docs/opencode.md` (now excluded) described the V1 adapter and the agent cited it. |
 | 6 | Plugin skill precedence against a same-id user skill | **unverified** | Not exercised. |
+
+## Live run (2026-11-18)
+
+Model: `cline-pass/baidu/ernie-5.5-flash-preview:free` (a free tier; paid
+ClinePass models were blocked with `insufficient_credits`). Plugin loaded
+through `.opencode/plugins/egm/index.ts`.
+
+- **Plugin `setup()` ran**: skills 7, commands 7 (marker evidence).
+- **`egm-review` workflow ran end to end** for a three-line `design.md`: the
+  `egm` agent loaded the skill, then dispatched reviewer subagents — inventive
+  catalyst, zoom out (twice), comprehension, structural, style, and design —
+  and wrote `zoom_out_report.md`, `comprehension_report.md`,
+  `critic_report.md`, and `intermediate_zoom_out_report.md`.
+- The run stopped when the free model hit its daily limit (`429`), not on a
+  plugin or permission error.
+
+### Findings from the live run
+
+- The vendored `docs/opencode.md` described the **V1** `task` adapter and the
+  agent cited it. That file is now excluded from the bundle; the orchestrator
+  prompt is authoritative for V2 `subagent` dispatch.
+- `opencode run` sends its message to the model and does **not** invoke slash
+  commands, so `/egm-install-agents` could not be exercised headlessly. The
+  agent files were written for this run by calling `buildAgentFiles` and
+  `installAgents` directly. `opencode plugin add @giljae/opencode-egm` remains
+  unverified until the package is published.
 
 ### Findings that shaped the design
 
@@ -67,9 +93,16 @@ denied.
 
 ## Limits
 
-- No model calls: installation, workflow, and isolation are reported separately.
-- Unverified items above stay unverified. This spike does not prove skill
-  loading, reviewer isolation at runtime, or end-to-end workflow behavior.
+- Installation via `opencode plugin add` is unverified until the package is
+  published; the live run used `.opencode/plugins/` discovery.
+- Reviewer isolation was exercised (reviewers were dispatched in fresh
+  subagent sessions) but a denied reviewer call was not captured; the merged
+  permission lists are the evidence, not an observed runtime denial.
+- The live run used a weak free model and stopped at a daily limit. It proves
+  the plumbing — skill load, subagent dispatch, report writing, and bundle
+  reads — not review quality or the human approval gates.
+- `/egm-install-agents` was not exercised: `opencode run` does not invoke slash
+  commands. It needs TUI verification.
 - `scripts/verify-plugin.mjs` re-runs the offline part (agent discovery and
   reviewer policy) against a local `opencode`. It needs a working OpenCode
   service for the project directory: in this sandbox a fresh XDG profile could

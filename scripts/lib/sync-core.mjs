@@ -9,7 +9,7 @@ import { join, relative, sep } from "node:path";
 export const WHITELIST = ["agents", "skills", "resources", "docs", "LICENSE"];
 
 /** Paths under a whitelisted entry that are not part of the runtime content. */
-export const EXCLUDE = ["docs/site", "docs/designs"];
+export const EXCLUDE = ["docs/site", "docs/designs", "docs/opencode.md"];
 
 /** Our own provenance file; never part of the upstream manifest. */
 export const MANIFEST_FILE = "UPSTREAM.json";

@@ -32,6 +32,10 @@ describe("vendored EGM tree", () => {
     expect(manifest.files).toHaveProperty("skills/egm-review/SKILL.md");
   });
 
+  test("excludes upstream host docs that describe the V1 task interface", () => {
+    expect(manifest.files).not.toHaveProperty("docs/opencode.md");
+  });
+
   test("records a pinned release tag in the package manifest", () => {
     const pkg = JSON.parse(
       readFileSync(join(packageRoot, "package.json"), "utf8"),
