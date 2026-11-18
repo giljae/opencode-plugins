@@ -6,6 +6,8 @@ An **unofficial port** of
 workflow into OpenCode: develop an idea with full context, then review it with
 reviewers that have never seen the conversation.
 
+Published on npm: [`@giljae/opencode-egm`](https://www.npmjs.com/package/@giljae/opencode-egm).
+
 This package is not affiliated with Google and is not endorsed by Google. The
 skill, persona, and standard content under `vendor/egm` is reproduced unchanged
 from the upstream revision recorded in `vendor/egm/UPSTREAM.json`.
@@ -49,6 +51,11 @@ because it bypasses OpenCode's per-file read rules, which would otherwise expose
 ```sh
 opencode plugin add @giljae/opencode-egm
 ```
+
+`opencode plugin add` fetches the package from the npm registry and adds it to
+your OpenCode configuration. You can also install it directly with
+`npm install @giljae/opencode-egm` if you load plugins by path instead of by
+name.
 
 OpenCode V2 plugins can register skills and commands but **cannot add agents**.
 So the agents are installed separately. In an OpenCode session, run:

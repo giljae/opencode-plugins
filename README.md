@@ -12,7 +12,7 @@ upstream projects they adapt.
 
 | Package | Description | Install |
 |---------|-------------|---------|
-| [`@giljae/opencode-egm`](packages/opencode-egm) | An OpenCode port of [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model): develop an idea with context, review it with fresh eyes. Adds an `egm` orchestrator, eight read-only reviewer subagents, seven skills, and seven `/egm-*` commands. | `opencode plugin add @giljae/opencode-egm` |
+| [`@giljae/opencode-egm`](https://www.npmjs.com/package/@giljae/opencode-egm) ([source](packages/opencode-egm)) | An OpenCode port of [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model): develop an idea with context, review it with fresh eyes. Adds an `egm` orchestrator, eight read-only reviewer subagents, seven skills, and seven `/egm-*` commands. | `opencode plugin add @giljae/opencode-egm` |
 
 New plugins are added to this table as they land.
 
@@ -32,14 +32,21 @@ docs/
 
 ## Using a plugin
 
+Every plugin is published on npm under the
+[`@giljae`](https://www.npmjs.com/org/giljae) scope, so you install it by name:
+
 ```sh
 opencode plugin add @giljae/<plugin>
 ```
 
-Plugins are OpenCode V2 server plugins. OpenCode loads them from your global
-configuration, so they apply in every project. Individual plugins document any
-extra setup they need (for example, EGM installs its agent files with an
-in-OpenCode command, because OpenCode V2 plugins cannot add agents).
+`opencode plugin add` fetches the package from the npm registry and adds it to
+your OpenCode configuration, so the plugin applies in every project. You can
+also install a package directly with `npm install @giljae/<plugin>` when you
+load plugins by path instead of by name.
+
+Plugins are OpenCode V2 server plugins. Individual plugins document any extra
+setup they need (for example, EGM installs its agent files with an in-OpenCode
+command, because OpenCode V2 plugins cannot add agents).
 
 ## Developing
 

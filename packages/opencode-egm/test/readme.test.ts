@@ -16,6 +16,10 @@ describe("package README", () => {
     expect(readme).toContain("/egm-install-agents");
   });
 
+  test("points at the published npm package", () => {
+    expect(readme).toContain("https://www.npmjs.com/package/@giljae/opencode-egm");
+  });
+
   test("states the port is unofficial and not endorsed by Google", () => {
     expect(readme).toContain("unofficial port");
     expect(readme.toLowerCase()).toMatch(/not affiliated with.*endorsed by google/);
