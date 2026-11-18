@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      verify_token:
+        description: "Only verify that NPM_TOKEN can authenticate, then stop"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,6 +25,14 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Verify NPM_TOKEN
+        if: inputs.verify_token
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          user=$(npm whoami --registry https://registry.npmjs.org/)
+          echo "NPM_TOKEN authenticates as: $user"
 
       - name: Resolve the latest upstream release tag
         id: upstream
