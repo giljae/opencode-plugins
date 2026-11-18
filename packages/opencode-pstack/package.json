@@ -1,0 +1,39 @@
+{
+  "name": "@giljae/opencode-pstack",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Unofficial OpenCode V2 plugin distribution of pstack (cursor/plugins): rigorous agent workflows with user-chosen model routing.",
+  "homepage": "https://github.com/giljae/opencode-plugins/tree/main/packages/opencode-pstack",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/giljae/opencode-plugins.git",
+    "directory": "packages/opencode-pstack"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "vendor",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@opencode/plugin": "2.0.11"
+  },
+  "pstack": {
+    "upstream": {}
+  }
+}

@@ -1,0 +1,10 @@
+@opencode-pstack
+Copyright 2026 the opencode-plugins authors
+
+This product includes software developed by Lauren Tan
+(https://github.com/cursor/plugins/tree/main/pstack), licensed under the MIT
+License. The vendored content under vendor/pstack is reproduced unchanged from
+that project.
+
+@opencode-pstack is an unofficial port and is not affiliated with or endorsed
+by Cursor or by the author.
