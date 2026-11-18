@@ -4,7 +4,15 @@
   "type": "module",
   "license": "Apache-2.0",
   "description": "Unofficial OpenCode V2 plugin distribution of the Elephant-Goldfish Model workflow.",
-  "homepage": "https://github.com/google/elephant-goldfish-model",
+  "homepage": "https://github.com/giljae/opencode-plugins/tree/main/packages/opencode-egm",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/giljae/opencode-plugins.git",
+    "directory": "packages/opencode-egm"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": "./src/index.ts"
   },

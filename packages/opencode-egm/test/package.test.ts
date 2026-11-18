@@ -24,6 +24,10 @@ describe("@giljae/opencode-egm manifest", () => {
     expect(pkg.files).toContain("vendor");
   });
 
+  test("publishes publicly under the scoped name", () => {
+    expect((pkg as { publishConfig?: { access?: string } }).publishConfig?.access).toBe("public");
+  });
+
   test("license and attribution notice ship with the package", () => {
     const license = fileURLToPath(new URL("../LICENSE", import.meta.url));
     const notice = fileURLToPath(new URL("../NOTICE", import.meta.url));
