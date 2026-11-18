@@ -10,7 +10,7 @@ export interface Permission {
 export const REVIEWER_IDS = [
   "egm-codebase-details",
   "egm-comprehension",
-  "egm-design-critic",
+  "egm-design",
   "egm-implementation-readiness",
   "egm-inventive-catalyst",
   "egm-structural",
