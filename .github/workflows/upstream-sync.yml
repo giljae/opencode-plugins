@@ -9,6 +9,10 @@ on:
         description: "Only verify that NPM_TOKEN can authenticate, then stop"
         type: boolean
         default: false
+      test_publish:
+        description: "Publish a prerelease under the 'test' tag; does not touch main or 'latest'"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -43,23 +47,32 @@ jobs:
           current=$(node -p "require('./packages/opencode-egm/package.json').egm.upstream.tag")
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "current=$current" >> "$GITHUB_OUTPUT"
-          echo "changed=$([ "$tag" != "$current" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          if [ "$tag" != "$current" ] || [ "${{ inputs.test_publish }}" = "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Report no change
         if: steps.upstream.outputs.changed != 'true'
         run: echo "Upstream is still at ${{ steps.upstream.outputs.tag }}; nothing to do."
 
       - name: Sync the vendored content
-        if: steps.upstream.outputs.changed == 'true'
+        if: steps.upstream.outputs.changed == 'true' && inputs.test_publish != true
         run: node scripts/sync-upstream.mjs --ref ${{ steps.upstream.outputs.tag }}
 
       - name: Test before publishing
         if: steps.upstream.outputs.changed == 'true'
         run: npm test
 
-      - name: Bump the minor version
+      - name: Bump the version
         if: steps.upstream.outputs.changed == 'true'
-        run: npm version minor --workspace @giljae/opencode-egm --no-git-tag-version
+        run: |
+          if [ "${{ inputs.test_publish }}" = "true" ]; then
+            npm version prerelease --preid test --workspace @giljae/opencode-egm --no-git-tag-version
+          else
+            npm version minor --workspace @giljae/opencode-egm --no-git-tag-version
+          fi
 
       - name: Skip if the version is already published
         id: guard
@@ -79,10 +92,15 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --workspace @giljae/opencode-egm --access public
+        run: |
+          if [ "${{ inputs.test_publish }}" = "true" ]; then
+            npm publish --workspace @giljae/opencode-egm --access public --tag test
+          else
+            npm publish --workspace @giljae/opencode-egm --access public
+          fi
 
       - name: Commit, tag, and push the sync
-        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true'
+        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true' && inputs.test_publish != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -92,7 +110,7 @@ jobs:
           git push --follow-tags
 
       - name: Create the GitHub release
-        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true'
+        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true' && inputs.test_publish != true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
