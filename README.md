@@ -14,6 +14,7 @@ upstream projects they adapt.
 |---------|-------------|---------|
 | [`@giljae/opencode-egm`](https://www.npmjs.com/package/@giljae/opencode-egm) ([source](packages/opencode-egm)) | An OpenCode port of [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model): develop an idea with context, review it with fresh eyes. Adds an `egm` orchestrator, eight read-only reviewer subagents, seven skills, and seven `/egm-*` commands. | `opencode plugin add @giljae/opencode-egm` |
 | [`@giljae/opencode-postgres-skills`](https://www.npmjs.com/package/@giljae/opencode-postgres-skills) ([source](packages/opencode-postgres-skills)) | An OpenCode port of [microsoft/postgres-skills](https://github.com/microsoft/postgres-skills): PostgreSQL guidance, Apache AGE graphs, and Oracle migration, plus a local `postgres-mcp` MCP server. | `opencode plugin add @giljae/opencode-postgres-skills` |
+| [`@giljae/opencode-pstack`](https://www.npmjs.com/package/@giljae/opencode-pstack) ([source](packages/opencode-pstack)) | An OpenCode port of [pstack](https://github.com/cursor/plugins/tree/main/pstack): rigorous agent workflows with per-role model routing you configure from your own OpenCode models. | `opencode plugin add @giljae/opencode-pstack` |
 
 New plugins are added to this table as they land.
 
