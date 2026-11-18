@@ -34,6 +34,11 @@
     "@opencode/plugin": "2.0.11"
   },
   "pstack": {
-    "upstream": {}
+    "upstream": {
+      "repo": "https://github.com/cursor/plugins",
+      "ref": "main",
+      "commit": "93b916d4a1e806507e22f4716b352fa91f2b227e",
+      "version": "0.15.43"
+    }
   }
 }
