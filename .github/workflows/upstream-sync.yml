@@ -1,0 +1,88 @@
+name: Upstream sync and publish
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: npm ci
+
+      - name: Resolve the latest upstream release tag
+        id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api repos/google/elephant-goldfish-model/releases/latest --jq .tag_name)
+          current=$(node -p "require('./packages/opencode-egm/package.json').egm.upstream.tag")
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "changed=$([ "$tag" != "$current" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Report no change
+        if: steps.upstream.outputs.changed != 'true'
+        run: echo "Upstream is still at ${{ steps.upstream.outputs.tag }}; nothing to do."
+
+      - name: Sync the vendored content
+        if: steps.upstream.outputs.changed == 'true'
+        run: node scripts/sync-upstream.mjs --ref ${{ steps.upstream.outputs.tag }}
+
+      - name: Test before publishing
+        if: steps.upstream.outputs.changed == 'true'
+        run: npm test
+
+      - name: Bump the minor version
+        if: steps.upstream.outputs.changed == 'true'
+        run: npm version minor --workspace @giljae/opencode-egm --no-git-tag-version
+
+      - name: Skip if the version is already published
+        id: guard
+        if: steps.upstream.outputs.changed == 'true'
+        run: |
+          version=$(node -p "require('./packages/opencode-egm/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if npm view "@giljae/opencode-egm@$version" version >/dev/null 2>&1; then
+            echo "already-published=true" >> "$GITHUB_OUTPUT"
+            echo "@giljae/opencode-egm@$version already exists; not republishing."
+          else
+            echo "already-published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit, tag, and push the sync
+        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/opencode-egm
+          git commit -m "chore: sync upstream ${{ steps.upstream.outputs.tag }}"
+          git tag "v${{ steps.guard.outputs.version }}"
+          git push --follow-tags
+
+      - name: Publish to npm
+        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace @giljae/opencode-egm --access public
+
+      - name: Create the GitHub release
+        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.guard.outputs.version }}" \
+            --title "v${{ steps.guard.outputs.version }}" \
+            --notes "Syncs upstream ${{ steps.upstream.outputs.tag }} (${{ steps.upstream.outputs.tag }})."
