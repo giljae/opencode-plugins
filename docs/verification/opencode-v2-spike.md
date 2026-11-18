@@ -47,8 +47,8 @@ through `.opencode/plugins/egm/index.ts`.
 - `opencode run` sends its message to the model and does **not** invoke slash
   commands, so `/egm-install-agents` could not be exercised headlessly. The
   agent files were written for this run by calling `buildAgentFiles` and
-  `installAgents` directly. `opencode plugin add @giljae/opencode-egm` remains
-  unverified until the package is published.
+  `installAgents` directly. `opencode plugin add @giljae/opencode-egm` is now
+  verified; see the install-path section below.
 
 ### Findings that shaped the design
 
@@ -91,10 +91,24 @@ Because OpenCode appends agent rules after the built-in defaults and the last
 matching rule wins, a reviewer resolves to read-only with `grep` and `.env`
 denied.
 
+## Install path (2026-11-18)
+
+With `@giljae/opencode-egm@0.0.2` published:
+
+- `opencode plugin add @giljae/opencode-egm` installed the package from the npm
+  registry into `~/.cache/opencode/npm/@giljae/opencode-egm@latest` and added
+  `"@giljae/opencode-egm"` to the global `opencode.jsonc`.
+- A session then **loaded it**; the server log records
+  `msg="loading plugin" id=@giljae/opencode-egm entrypoint=…/node_modules/@giljae/opencode-egm/src/index.ts`.
+
+The session's model call failed only because the global configuration did not
+declare the free ClinePass model used for the test; that is unrelated to the
+plugin.
+
 ## Limits
 
-- Installation via `opencode plugin add` is unverified until the package is
-  published; the live run used `.opencode/plugins/` discovery.
+- Installation via `opencode plugin add` is verified for `0.0.2`; see the
+  install-path section.
 - Reviewer isolation was exercised (reviewers were dispatched in fresh
   subagent sessions) but a denied reviewer call was not captured; the merged
   permission lists are the evidence, not an observed runtime denial.
