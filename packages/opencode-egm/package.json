@@ -25,8 +25,8 @@
   "egm": {
     "upstream": {
       "repo": "https://github.com/google/elephant-goldfish-model",
-      "tag": "",
-      "commit": ""
+      "tag": "v0.1.1",
+      "commit": "dea7761de06ce5b51c177ebb9bba0469f24af5a4"
     }
   }
 }
