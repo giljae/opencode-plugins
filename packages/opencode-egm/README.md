@@ -1,109 +1,137 @@
 # @giljae/opencode-egm
 
+**Design with an elephant. Review with a goldfish.**
+
 An **unofficial port** of [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model)
 (EGM) for [OpenCode](https://opencode.ai).
 
 Published on npm:
 [`@giljae/opencode-egm`](https://www.npmjs.com/package/@giljae/opencode-egm).
-This package is not affiliated with Google and is not endorsed by Google. The
-content under `vendor/egm` is reproduced unchanged from upstream; see `NOTICE`.
+This package is not affiliated with Google and is not endorsed by Google.
+
+---
+
+## What it does for you
+
+You have a design, a plan, or a README. Before you build on it, you want a
+second opinion — but a generic assistant tends to agree with you, because it
+just read everything you wrote.
+
+EGM fixes that. It sends your document to eight independent reviewers who
+**never see your conversation**. They only read the document and the files it
+points at, so they notice the assumptions, gaps, and contradictions you have
+stopped seeing. You stay in charge: you decide what to change, and you approve
+the document.
 
 ## What is EGM?
 
-EGM splits a design review into two roles:
+Two roles, working together:
 
-- **The Elephant** holds your project context and writes the draft. It is the
-  agent you talk to.
-- **The Goldfish** are reviewers that have never seen your conversation. They
-  read only the document and the files it points at, so they notice the
-  assumptions and gaps you have stopped seeing.
+- **The Elephant** remembers everything and writes the draft. This is the agent
+  you talk to.
+- **The Goldfish** remembers nothing. Each reviewer is a fresh reader who sees
+  only the document.
 
-The name is the point: the Elephant remembers everything, the Goldfish remembers
-nothing — and the second pair of eyes is what catches the mistake. **You** make
-the design decisions and approve the document.
+The name says it: the Elephant holds context, the Goldfish starts clean. The
+fresh pair of eyes is the whole point.
 
-## What this plugin adds
+## What you get
 
 | | |
 |---|---|
 | **`egm` agent** | The orchestrator you select. |
-| **8 reviewer subagents** | Read-only Goldfish (comprehension, structural, style, design, zoom-out, …). |
-| **7 skills** | `egm-brainstorm`, `egm-draft`, `egm-review`, `egm-review-loop`, `egm-resolve`, `egm-bootstrap`, `egm-drift-report`. |
+| **8 reviewer subagents** | Read-only Goldfish: comprehension, structural, style, design, zoom-out, and more. |
 | **7 commands** | `/egm-brainstorm`, `/egm-draft`, `/egm-review`, `/egm-review-loop`, `/egm-resolve`, `/egm-bootstrap`, `/egm-drift-report`. |
 
-## Before you start
+## Requirements
 
-- OpenCode V2 (this was built and checked against OpenCode 2.0.11).
+- OpenCode V2 (built and checked against OpenCode 2.0.11).
 - Node 20 or newer.
 
-## Install
+## Get started
 
-**1. Add the plugin.**
+1. Install the plugin:
+   ```sh
+   opencode plugin add @giljae/opencode-egm
+   ```
+2. In a session, install the agents (OpenCode plugins cannot add agents):
+   ```
+   /egm-install-agents
+   ```
+3. Start a new session and select the `egm` agent.
 
-```sh
-opencode plugin add @giljae/opencode-egm
-```
+You are ready. The next section shows the two things you will do most.
 
-**2. Install the agents.**
+## How to review an existing document
 
-OpenCode plugins cannot add agents, so in a session run:
-
-```
-/egm-install-agents
-```
-
-This writes `egm.md` and the eight `egm-<reviewer>.md` files into
-`.opencode/agents/` in the current project. Re-run it after a plugin update.
-
-## Everyday use
-
-1. Select the `egm` agent.
-2. Run a command with a target:
+You have a design doc, a plan, or a README and want it scrutinized:
 
 ```
 /egm-review path/to/design.md
+```
+
+The orchestrator loads the review skill, reads the document, dispatches the
+Goldfish reviewers into fresh sessions, and writes a report with their findings.
+You then decide what to act on.
+
+## How to develop an idea
+
+You have a rough idea and want it sharpened before writing code:
+
+```
 /egm-brainstorm "an idea to explore"
 /egm-draft path/to/concepts_brief.md
 ```
 
-The orchestrator loads the matching skill, dispatches the Goldfish reviewers as
-fresh subagent sessions, and writes the report itself. Use an ordinary message
-for review text rather than a slash-command argument.
+`brainstorm` turns the idea into a concepts brief; `draft` turns the brief into a
+design specification that the reviewers can then critique.
 
-## The seven commands
+## All the commands
 
-| Command | What it does |
-|---------|--------------|
+| Command | What it is for |
+|---------|----------------|
 | `/egm-brainstorm` | Explore an idea and produce a concepts brief. |
 | `/egm-draft` | Turn a concepts brief into a design specification. |
 | `/egm-review` | Review an existing document against the code and standards. |
-| `/egm-review-loop` | Run a configurable reviewer loop with your own standards. |
-| `/egm-resolve` | Reconcile findings and resolve conflicts. |
+| `/egm-review-loop` | Run a reviewer loop with your own choice of reviewers and standards. |
+| `/egm-resolve` | Reconcile findings and resolve conflicts between reviewers. |
 | `/egm-bootstrap` | Document an existing codebase. |
-| `/egm-drift-report` | Report where code has drifted from its design. |
+| `/egm-drift-report` | Report where the code has drifted from its design. |
 
-## How it works
+## Tips
 
-When you run a command, the orchestrator loads the skill, reads the target, and
-dispatches the relevant reviewers as **fresh subagent sessions**, passing only
-absolute paths — never the conversation. Each reviewer is strictly read-only:
-it can read and search files, but cannot edit, run shell commands, or delegate.
-`grep` is denied for reviewers because it bypasses OpenCode's per-file read
-rules. The orchestrator keeps pstack-style approval gates and stops rather than
-guesses when a required read or a reviewer result is missing.
+- **Paste review text as a normal message, not as a command argument.** OpenCode
+  evaluates shell markers in slash-command arguments before permissions apply.
+- **Answer the questions.** The orchestrator asks one question at a time and
+  waits. It will not treat silence or elapsed time as approval.
+- **Re-run `/egm-install-agents` after updating the plugin**, so the agent files
+  point at the new location.
 
-## Upstream
+## Troubleshooting
 
-The vendored content tracks the latest
+- **`/egm-install-agents` is not offered.** The plugin is not loaded in this
+  project. Check that `opencode plugin add @giljae/opencode-egm` succeeded and
+  start a new session.
+- **The `egm` agent is missing.** Run `/egm-install-agents` once; it writes the
+  agents into `.opencode/agents/` for the current project.
+- **A reviewer says it cannot read a file.** Pass absolute paths, and keep the
+  target and the standards inside the project or in the plugin bundle.
+- **A reviewer seems to quote a `task` tool.** That is old V1 wording from an
+  older bundle; update to the current plugin version.
+
+## How updates work
+
+The bundled content tracks the latest
 [release tag](https://github.com/google/elephant-goldfish-model/releases) of
 `google/elephant-goldfish-model`. The current bundle is **v0.1.1**. A scheduled
-workflow re-syncs and republishes when upstream cuts a new release.
+workflow re-syncs and republishes when upstream cuts a new release, so you get
+upstream's improvements without doing anything.
 
 ## Verification status
 
 What was checked on a real OpenCode is recorded in the source repository at
 `docs/verification/opencode-v2-spike.md`. In short: the plugin loads, the
-reviewers are discovered and read-only, and a real `egm-review` run loaded the
+reviewers are discovered and read-only, and a real `/egm-review` run loaded the
 skill, dispatched the reviewers, and wrote its reports. Treat anything not
 recorded there as unverified.
 

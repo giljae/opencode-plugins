@@ -38,5 +38,6 @@ describe("package README", () => {
     expect(readme).toContain(".opencode/pstack-models.md");
     expect(readme).toMatch(/1\./);
     expect(readme).toMatch(/2\./);
+    expect(readme.toLowerCase()).toContain("troubleshooting");
   });
 });

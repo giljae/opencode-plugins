@@ -36,5 +36,6 @@ describe("package README", () => {
     expect(readme).toContain("/egm-review");
     expect(readme).toMatch(/1\./);
     expect(readme).toMatch(/2\./);
+    expect(readme.toLowerCase()).toContain("troubleshooting");
   });
 });

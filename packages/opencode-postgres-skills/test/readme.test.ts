@@ -38,5 +38,6 @@ describe("package README", () => {
     expect(readme.toLowerCase()).toContain("what is");
     expect(readme).toMatch(/1\./);
     expect(readme).toMatch(/2\./);
+    expect(readme.toLowerCase()).toContain("troubleshooting");
   });
 });
