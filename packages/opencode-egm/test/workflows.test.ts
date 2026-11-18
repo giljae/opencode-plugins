@@ -62,4 +62,13 @@ describe("upstream-sync.yml", () => {
     expect(joined).toContain("NPM_TOKEN");
     expect(joined).toMatch(/npm view|already exists|endswith|republish/i);
   });
+
+  test("publishes before pushing the commit so a failed publish is retried", () => {
+    const steps = sync.jobs?.sync?.steps ?? [];
+    const publishIndex = steps.findIndex((step) => (step.run ?? "").includes("npm publish"));
+    const pushIndex = steps.findIndex((step) => (step.run ?? "").includes("git push"));
+    expect(publishIndex).toBeGreaterThanOrEqual(0);
+    expect(pushIndex).toBeGreaterThanOrEqual(0);
+    expect(publishIndex).toBeLessThan(pushIndex);
+  });
 });

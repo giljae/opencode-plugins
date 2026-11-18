@@ -44,6 +44,16 @@ describe("reviewerPermissions", () => {
     expect(effect("glob", "**/*.md")).toBe("allow");
     expect(effect("read", `${BUNDLE}/agents/zoom_out.md`)).toBe("allow");
   });
+
+  test("allows external-directory access to the installed bundle", () => {
+    expect(effect("external_directory", `${BUNDLE}/resources/document_standards`)).toBe("allow");
+  });
+
+  test("normalizes a bundle path with a trailing slash", () => {
+    const rules = reviewerPermissions(`${BUNDLE}/`);
+    expect(rules.map((rule) => rule.resource).join(" ")).not.toContain("//");
+    expect(resolveEffect(rules, "external_directory", `${BUNDLE}/agents/x.md`)).toBe("allow");
+  });
 });
 
 describe("orchestratorPermissions", () => {
@@ -65,6 +75,10 @@ describe("orchestratorPermissions", () => {
     expect(effect("edit", "src/index.ts")).toBe("ask");
     expect(effect("shell", "git status")).toBe("ask");
     expect(effect("read", ".env")).toBe("ask");
+  });
+
+  test("allows external-directory access to the installed bundle", () => {
+    expect(effect("external_directory", `${BUNDLE}/resources/document_standards`)).toBe("allow");
   });
 });
 

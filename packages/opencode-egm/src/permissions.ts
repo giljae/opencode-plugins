@@ -50,15 +50,23 @@ export function resolveEffect(
   return result;
 }
 
+function bundleRoot(bundleDir: string): string {
+  return bundleDir.replace(/\/+$/, "");
+}
+
 /** Read-only reviewer: deny everything, then allow reads and globs, deny grep. */
 export function reviewerPermissions(bundleDir: string): Permission[] {
+  const bundle = bundleRoot(bundleDir);
   return [
     { action: "*", resource: "*", effect: "deny" },
     { action: "read", resource: "*", effect: "allow" },
     { action: "read", resource: "*.env", effect: "deny" },
     { action: "read", resource: "*.env.*", effect: "deny" },
     { action: "read", resource: "*.env.example", effect: "allow" },
-    { action: "read", resource: `${bundleDir}/*`, effect: "allow" },
+    // The bundle lives outside the project, so external_directory is checked
+    // before read; allow only the installed bundle, never the wider filesystem.
+    { action: "external_directory", resource: `${bundle}/*`, effect: "allow" },
+    { action: "read", resource: `${bundle}/*`, effect: "allow" },
     { action: "glob", resource: "*", effect: "allow" },
     { action: "grep", resource: "*", effect: "deny" },
   ];
@@ -69,11 +77,13 @@ export function orchestratorPermissions(
   bundleDir: string,
   reviewerIds: readonly string[],
 ): Permission[] {
+  const bundle = bundleRoot(bundleDir);
   return [
     { action: "read", resource: "*", effect: "allow" },
     { action: "read", resource: "*.env", effect: "ask" },
     { action: "read", resource: "*.env.*", effect: "ask" },
-    { action: "read", resource: `${bundleDir}/*`, effect: "allow" },
+    { action: "external_directory", resource: `${bundle}/*`, effect: "allow" },
+    { action: "read", resource: `${bundle}/*`, effect: "allow" },
     { action: "glob", resource: "*", effect: "allow" },
     { action: "grep", resource: "*", effect: "allow" },
     { action: "skill", resource: "*", effect: "deny" },
