@@ -40,8 +40,17 @@ configured in OpenCode, so `opencode models` listed nothing.
   panels. The available ClinePass credential cannot serve it, and no other
   provider is configured.
 
+## Install path
+
+`@giljae/opencode-pstack@0.0.1` was installed with `opencode plugin add`.
+OpenCode added it to the global config, installed the package (with all 58
+vendored skills) into `~/.cache/opencode/npm/…`, and loaded `src/index.ts`
+(server log: `loading plugin id=@giljae/opencode-pstack`). Agents generated from
+the installed bundle were discovered by `debug agents` with the right model
+(`pstack`, `pstack-model-provider-a-model-b`, `poteto-agent`, `comment-sicko`).
+The install was then removed and the config restored.
+
 ## Limits
 
 - Items 1 and 3-7 stay unverified until a model is run.
-- The plugin was loaded from the repository, not from an npm-installed package;
-  the packaged install path stays unverified until this is published.
+- The npm install path is verified; a live model run is not.
