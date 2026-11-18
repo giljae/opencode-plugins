@@ -31,4 +31,12 @@ describe("package README", () => {
     expect(readme).toContain("MIT");
     expect(readme.toLowerCase()).toMatch(/not affiliated with.*endorsed by/);
   });
+
+  test("explains what pstack is and gives a concrete, step-by-step setup", () => {
+    expect(readme.toLowerCase()).toContain("what is pstack");
+    expect(readme).toContain("bug-fix:");
+    expect(readme).toContain(".opencode/pstack-models.md");
+    expect(readme).toMatch(/1\./);
+    expect(readme).toMatch(/2\./);
+  });
 });
