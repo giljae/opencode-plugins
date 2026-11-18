@@ -18,7 +18,9 @@ export function resolveMcpEntry(): string {
 export function mcpServerConfig(): McpLocalConfig {
   return {
     type: "local",
-    command: [process.execPath, resolveMcpEntry(), "run", "--no-telemetry"],
+    // Use `node` from PATH, not `process.execPath`: under OpenCode that is the
+    // OpenCode (Bun) binary, which cannot run this Node launcher.
+    command: ["node", resolveMcpEntry(), "run", "--no-telemetry"],
     environment: { POSTGRES_MCP_QUERY_TIMEOUT_MS: "540000" },
     timeout: { startup: 90000 },
   };

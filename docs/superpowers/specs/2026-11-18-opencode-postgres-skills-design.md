@@ -183,7 +183,9 @@ packages/opencode-postgres-skills/
    ctx.mcp.transform((editor) => {
      editor.set("postgres-mcp", {
        type: "local",
-       command: [process.execPath, entry, "run", "--no-telemetry"],
+       // `node` from PATH, not `process.execPath`: under OpenCode that is the
+       // OpenCode (Bun) binary, which cannot run this Node launcher.
+       command: ["node", entry, "run", "--no-telemetry"],
        environment: { POSTGRES_MCP_QUERY_TIMEOUT_MS: "540000" },
        timeout: { startup: 90000 },
      });

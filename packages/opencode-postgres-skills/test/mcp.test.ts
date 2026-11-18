@@ -40,7 +40,7 @@ describe("registerMcp", () => {
     const [name, config] = set[0] as [string, McpLocalConfig];
     expect(name).toBe(MCP_SERVER_NAME);
     expect(config.type).toBe("local");
-    expect(config.command[0]).toBe(process.execPath);
+    expect(config.command[0]).toBe("node");
     expect(config.command).toContain(resolveMcpEntry());
     expect(config.command).toContain("run");
     expect(config.command).toContain("--no-telemetry");
