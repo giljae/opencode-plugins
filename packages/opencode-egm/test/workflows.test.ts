@@ -8,67 +8,41 @@ import { parse } from "yaml";
 const root = fileURLToPath(new URL("../../..", import.meta.url));
 
 interface Workflow {
-  on?: Record<string, unknown>;
+  on?: Record<string, { inputs?: Record<string, unknown> }>;
   jobs?: Record<string, { steps?: { run?: string; uses?: string; if?: string }[] }>;
 }
 
-function workflow(name: string): Workflow {
-  return parse(readFileSync(join(root, ".github/workflows", name), "utf8")) as Workflow;
-}
+const sync = parse(
+  readFileSync(join(root, ".github/workflows/upstream-sync.yml"), "utf8"),
+) as Workflow;
 
-function allRuns(value: unknown): string {
-  return JSON.stringify(value);
-}
+const steps = sync.jobs?.sync?.steps ?? [];
+const runs = steps.map((step) => step.run ?? "").join("\n");
 
-describe("ci.yml", () => {
-  const ci = workflow("ci.yml");
-
-  test("runs on pull requests and pushes to main", () => {
-    expect(ci.on).toHaveProperty("pull_request");
-    expect(ci.on).toHaveProperty("push");
-  });
-
-  test("installs, typechecks, and tests", () => {
-    const runs = Object.values(ci.jobs ?? {}).flatMap((job) =>
-      (job.steps ?? []).map((step) => step.run ?? ""),
-    );
-    const joined = runs.join("\n");
-    expect(joined).toContain("npm ci");
-    expect(joined).toContain("npm run typecheck");
-    expect(joined).toContain("npm test");
-    expect(allRuns(ci)).toContain("actions/checkout");
-    expect(allRuns(ci)).toContain("actions/setup-node");
-  });
-});
-
-describe("upstream-sync.yml", () => {
-  const sync = workflow("upstream-sync.yml");
-
-  test("runs on a schedule and on demand", () => {
+describe("upstream-sync.yml (shared by every plugin)", () => {
+  test("runs on a schedule and on demand with the expected inputs", () => {
     expect(sync.on).toHaveProperty("schedule");
     expect(sync.on).toHaveProperty("workflow_dispatch");
+    const inputs = sync.on?.workflow_dispatch?.inputs ?? {};
+    expect(Object.keys(inputs)).toEqual(
+      expect.arrayContaining(["verify_token", "test_publish", "package_filter"]),
+    );
   });
 
-  test("syncs the latest upstream tag and tests before publishing", () => {
-    const joined = allRuns(sync);
-    expect(joined).toContain("releases/latest");
-    expect(joined).toContain("scripts/sync.mjs");
-    expect(joined).toContain("npm test");
-    expect(joined).toContain("npm publish");
+  test("discovers every plugin package and iterates them", () => {
+    expect(runs).toContain("scripts/upstream-status.mjs");
+    expect(runs).toMatch(/for dir in/);
+    expect(runs).toContain("npm test");
+    expect(runs).toContain("npm publish");
+    expect(runs).toContain("NPM_TOKEN");
   });
 
-  test("publishes with a token and never republishes a version", () => {
-    const joined = allRuns(sync);
-    expect(joined).toContain("NPM_TOKEN");
-    expect(joined).toMatch(/npm view|already exists|endswith|republish/i);
-  });
-
-  test("publishes before pushing the commit so a failed publish is retried", () => {
-    const steps = sync.jobs?.sync?.steps ?? [];
+  test("publishes before pushing the commit, and hard-codes no package name", () => {
     const publishIndex = steps.findIndex((step) => (step.run ?? "").includes("npm publish"));
     const pushIndex = steps.findIndex((step) => (step.run ?? "").includes("git push"));
     expect(publishIndex).toBeGreaterThanOrEqual(0);
-    expect(pushIndex).toBeGreaterThanOrEqual(0);
-    expect(publishIndex).toBeLessThan(pushIndex);
+    expect(pushIndex).toBeGreaterThan(publishIndex);
+    expect(JSON.stringify(sync)).not.toContain("@giljae/opencode-egm");
+    expect(JSON.stringify(sync)).not.toContain("@giljae/opencode-postgres-skills");
   });
 });

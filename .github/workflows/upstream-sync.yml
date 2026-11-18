@@ -13,6 +13,10 @@ on:
         description: "Publish a prerelease under the 'test' tag; does not touch main or 'latest'"
         type: boolean
         default: false
+      package_filter:
+        description: "Limit to one package directory name (for test_publish)"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -38,82 +42,69 @@ jobs:
           user=$(npm whoami --registry https://registry.npmjs.org/)
           echo "NPM_TOKEN authenticates as: $user"
 
-      - name: Resolve the latest upstream release tag
-        id: upstream
+      - name: Find packages to publish
+        id: changed
         env:
           GH_TOKEN: ${{ github.token }}
+          FILTER: ${{ inputs.package_filter }}
+          TEST_PUBLISH: ${{ inputs.test_publish }}
         run: |
-          tag=$(gh api repos/google/elephant-goldfish-model/releases/latest --jq .tag_name)
-          current=$(node -p "require('./packages/opencode-egm/package.json').egm.upstream.ref ?? ''")
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "current=$current" >> "$GITHUB_OUTPUT"
-          if [ "$tag" != "$current" ] || [ "${{ inputs.test_publish }}" = "true" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+          node scripts/upstream-status.mjs > /tmp/upstream-status.json
+          node -e '
+            const status = require("/tmp/upstream-status.json");
+            const filter = process.env.FILTER || "";
+            const testPublish = process.env.TEST_PUBLISH === "true";
+            let list = status.filter((pkg) => pkg.changed || testPublish);
+            if (filter) {
+              list = list.filter((pkg) => pkg.plugin.endsWith("/" + filter));
+            }
+            console.log("dirs=" + list.map((pkg) => pkg.plugin).join(" "));
+          ' >> "$GITHUB_OUTPUT"
 
       - name: Report no change
-        if: steps.upstream.outputs.changed != 'true'
-        run: echo "Upstream is still at ${{ steps.upstream.outputs.tag }}; nothing to do."
+        if: steps.changed.outputs.dirs == ''
+        run: echo "No upstream changes; nothing to do."
 
-      - name: Sync the vendored content
-        if: steps.upstream.outputs.changed == 'true' && inputs.test_publish != true
-        run: node scripts/sync.mjs --plugin packages/opencode-egm
-
-      - name: Test before publishing
-        if: steps.upstream.outputs.changed == 'true'
-        run: npm test
-
-      - name: Bump the version
-        if: steps.upstream.outputs.changed == 'true'
-        run: |
-          if [ "${{ inputs.test_publish }}" = "true" ]; then
-            npm version prerelease --preid test --workspace @giljae/opencode-egm --no-git-tag-version
-          else
-            npm version minor --workspace @giljae/opencode-egm --no-git-tag-version
-          fi
-
-      - name: Skip if the version is already published
-        id: guard
-        if: steps.upstream.outputs.changed == 'true'
-        run: |
-          version=$(node -p "require('./packages/opencode-egm/package.json').version")
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if npm view "@giljae/opencode-egm@$version" version >/dev/null 2>&1; then
-            echo "already-published=true" >> "$GITHUB_OUTPUT"
-            echo "@giljae/opencode-egm@$version already exists; not republishing."
-          else
-            echo "already-published=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publish to npm
-        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true'
+      - name: Sync, test, bump, and publish
+        if: steps.changed.outputs.dirs != ''
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TEST_PUBLISH: ${{ inputs.test_publish }}
         run: |
-          if [ "${{ inputs.test_publish }}" = "true" ]; then
-            npm publish --workspace @giljae/opencode-egm --access public --tag test
-          else
-            npm publish --workspace @giljae/opencode-egm --access public
-          fi
+          set -euo pipefail
+          for dir in ${{ steps.changed.outputs.dirs }}; do
+            name=$(node -p "require('./$dir/package.json').name")
+            echo "::group::$name"
+            if [ "$TEST_PUBLISH" != "true" ]; then
+              node scripts/sync.mjs --plugin "$dir"
+            fi
+            npm test
+            if [ "$TEST_PUBLISH" = "true" ]; then
+              npm version prerelease --preid test --workspace "$name" --no-git-tag-version
+            else
+              npm version minor --workspace "$name" --no-git-tag-version
+            fi
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version already published; skipping"
+            elif [ "$TEST_PUBLISH" = "true" ]; then
+              npm publish --workspace "$name" --access public --tag test
+            else
+              npm publish --workspace "$name" --access public
+            fi
+            echo "::endgroup::"
+          done
 
-      - name: Commit, tag, and push the sync
-        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true' && inputs.test_publish != true
+      - name: Commit, tag, and push
+        if: steps.changed.outputs.dirs != '' && inputs.test_publish != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/opencode-egm
-          git commit -m "chore: sync upstream ${{ steps.upstream.outputs.tag }}"
-          git tag "v${{ steps.guard.outputs.version }}"
+          git add packages
+          git commit -m "chore: sync upstream releases"
+          for dir in ${{ steps.changed.outputs.dirs }}; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            git tag "${name}@${version}"
+          done
           git push --follow-tags
-
-      - name: Create the GitHub release
-        if: steps.upstream.outputs.changed == 'true' && steps.guard.outputs.already-published != 'true' && inputs.test_publish != true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "v${{ steps.guard.outputs.version }}" \
-            --title "v${{ steps.guard.outputs.version }}" \
-            --notes "Syncs upstream ${{ steps.upstream.outputs.tag }}."
