@@ -15,7 +15,7 @@ const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
 describe("@giljae/opencode-egm manifest", () => {
   test("declares the published identity", () => {
     expect(pkg.name).toBe("@giljae/opencode-egm");
-    expect(pkg.version).toBe("0.0.1");
+    expect(pkg.version).toBe("0.0.2");
     expect(pkg.license).toBe("Apache-2.0");
   });
 
