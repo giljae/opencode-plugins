@@ -4,11 +4,9 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
 
-import { registerAgents } from "../src/agents.ts";
-import type { AgentDefinition, AgentHost } from "../src/host.ts";
-import { REVIEWER_IDS, orchestratorPermissions, reviewerPermissions } from "../src/permissions.ts";
+import { buildAgentFiles } from "../src/agents.ts";
+import { REVIEWER_IDS } from "../src/permissions.ts";
 
-const BUNDLE = "/opt/egm/vendor/egm";
 const dirs: string[] = [];
 
 function fixture(reviewerIds: readonly string[], extraIds: string[] = []): string {
@@ -29,45 +27,31 @@ afterEach(() => {
   }
 });
 
-function fakeHost(): { host: AgentHost; added: AgentDefinition[] } {
-  const added: AgentDefinition[] = [];
-  const host: AgentHost = {
-    agent: {
-      transform: async (cb) => {
-        cb({ add: (agent) => added.push(agent) });
-      },
-    },
-  };
-  return { host, added };
-}
-
-describe("registerAgents", () => {
-  test("registers one primary orchestrator and the eight reviewers", async () => {
+describe("buildAgentFiles", () => {
+  test("emits the primary orchestrator and the eight read-only reviewers", () => {
     const bundle = fixture(REVIEWER_IDS, ["egm-synthesizer", "egm-bootstrap-orchestrator"]);
-    const { host, added } = fakeHost();
+    const files = buildAgentFiles(bundle);
 
-    const count = await registerAgents(host, bundle);
+    expect(files).toHaveLength(9);
+    expect(files.map((file) => file.name).sort()).toEqual(
+      [...REVIEWER_IDS.map((id) => `${id}.md`), "egm.md"].sort(),
+    );
 
-    expect(count).toBe(9);
-    expect(added).toHaveLength(9);
-    const primary = added.find((a) => a.id === "egm");
-    expect(primary?.mode).toBe("primary");
-    expect(primary?.permissions).toEqual(orchestratorPermissions(bundle, REVIEWER_IDS));
-    expect(primary?.system).toContain(bundle);
+    const orchestrator = files.find((file) => file.name === "egm.md");
+    expect(orchestrator?.content).toContain("mode: primary");
+    expect(orchestrator?.content).toContain(bundle);
+    expect(orchestrator?.content).toContain('resource: "egm-*"');
+    expect(orchestrator?.content).toContain("subagent");
 
-    const reviewers = added.filter((a) => a.id !== "egm");
-    expect(reviewers.map((a) => a.id).sort()).toEqual([...REVIEWER_IDS].sort());
-    for (const reviewer of reviewers) {
-      expect(reviewer.mode).toBe("subagent");
-      expect(reviewer.system).toBe(`body of ${reviewer.id}`);
-      expect(reviewer.permissions).toEqual(reviewerPermissions(bundle));
-    }
+    const reviewer = files.find((file) => file.name === "egm-zoom-out.md");
+    expect(reviewer?.content).toContain("mode: subagent");
+    expect(reviewer?.content).toContain('action: "*"');
+    expect(reviewer?.content).toContain("effect: deny");
+    expect(reviewer?.content).toContain("body of egm-zoom-out");
   });
 
-  test("throws instead of registering a partial set when a persona is missing", async () => {
+  test("throws instead of emitting a partial set when a persona is missing", () => {
     const bundle = fixture(REVIEWER_IDS.slice(0, 7));
-    const { host, added } = fakeHost();
-    await expect(registerAgents(host, bundle)).rejects.toThrow(/Missing reviewer personas/);
-    expect(added).toEqual([]);
+    expect(() => buildAgentFiles(bundle)).toThrow(/Missing reviewer personas/);
   });
 });

@@ -1,7 +1,8 @@
-import type { Permission } from "./permissions.ts";
-
 // Minimal structural view of the OpenCode V2 plugin context. We declare only
 // what we call, so tests can supply fakes and the host owns the rest.
+//
+// Note: OpenCode V2 plugins cannot add agents (`AgentEditor` has no `add`), so
+// agents are delivered as markdown files rather than registered here.
 
 export interface SkillDefinition {
   id: string;
@@ -18,27 +19,6 @@ export interface SkillEditor {
 export interface SkillHost {
   skill: {
     transform(callback: (editor: SkillEditor) => void): Promise<unknown>;
-  };
-}
-
-export type AgentMode = "primary" | "subagent" | "all";
-
-export interface AgentDefinition {
-  id: string;
-  description: string;
-  mode: AgentMode;
-  system: string;
-  permissions: Permission[];
-  color?: string;
-}
-
-export interface AgentEditor {
-  add(agent: AgentDefinition): void;
-}
-
-export interface AgentHost {
-  agent: {
-    transform(callback: (editor: AgentEditor) => void): Promise<unknown>;
   };
 }
 
