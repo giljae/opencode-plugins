@@ -65,10 +65,19 @@ personas, or standards, we republish a new version rather than diverge.
   `.opencode/agents/`, and plugins are npm packages with a server part
   (`@opencode/plugin`, `Plugin.define`, `setup(ctx)`). The V1 adapter in
   upstream does not apply.
-- **Registration surface (verified from V2 docs).** A server plugin can
-  register agents (`ctx.agent.transform`), skills (`ctx.skill.transform`, with
-  `id`/`name`/`description`/`path`/`content`), commands
-  (`ctx.command.transform`), and can read/assert permissions (`ctx.permission`).
+- **Registration surface (verified against `@opencode/plugin` 2.0.11 and
+  2.3.1).** A server plugin can add **skills** (`ctx.skill.transform`, with
+  `id`/`name`/`description`/`path`/`content`), **commands**
+  (`ctx.command.transform`), tools, and other domains, and can read/assert
+  permissions (`ctx.permission`).
+- **Plugins cannot add agents.** `AgentEditor` exposes
+  `list`/`get`/`update`/`remove`/`default` but no `add` in any V2 version. Editable
+  domains that do have `add`: skill, command, tool, provider, reference,
+  artifact, vcs, websearch, worktree. Agents come only from the config `agents`
+  object (inline definitions; no paths array) or from markdown under
+  `.opencode/agents/`, `~/.config/opencode/agents/`, or `/etc/opencode/agents/`.
+  This changes the install model: the plugin registers skills and commands, and
+  an explicit install step writes the nine agent files.
 - **Skill file layout matters.** EGM skills reference sibling files. Some are
   skill-relative (`references/...`), others are bundle-root-relative
   (`agents/...`, `resources/document_standards/...`). Vendored layout must
@@ -154,19 +163,21 @@ Future plugins add a sibling under `packages/` with the same shape and reuse
 `setup(ctx)`:
 
 1. Resolve `bundleRoot` to the vendored directory inside the installed package.
-2. Register agents:
-   - `egm` (primary orchestrator): system prompt is the vendored orchestrator
-     instructions adapted to V2 dispatch wording.
-   - Eight reviewer subagents, ids `egm-<reviewer>`, each with the vendored
-     persona as its system prompt and a read-only permission set.
-3. Register skills: for each `vendor/egm/skills/<id>/SKILL.md`, register with
+2. Register skills: for each `vendor/egm/skills/<id>/SKILL.md`, register with
    the path-derived id, frontmatter name/description, absolute `path`, and body
    `content`, preserving the directory form so `references/` resolve.
-4. Register commands: `/egm-brainstorm`, `/egm-draft`, `/egm-review`,
+3. Register commands: `/egm-brainstorm`, `/egm-draft`, `/egm-review`,
    `/egm-review-loop`, `/egm-resolve`, `/egm-bootstrap`, `/egm-drift-report`,
-   each prompting the `egm` agent to load the matching skill with `$ARGUMENTS`.
-5. Tell the orchestrator the absolute `bundleRoot` so bundle-root references
-   (`agents/`, `resources/`) resolve.
+   each prompting the `egm` agent to load the matching skill with `$ARGUMENTS`,
+   plus `/egm-install-agents`.
+4. Register agents by writing files, not through the plugin API: the
+   `/egm-install-agents` command writes nine markdown agent files into the
+   project's `.opencode/agents/` directory (or a target passed in the command),
+   generated from the vendored personas plus our orchestrator prompt and
+   permission rules. The orchestrator prompt embeds the installed bundle path.
+   Re-run after a plugin update.
+5. Tell the orchestrator the absolute `bundleRoot` (embedded at install time) so
+   bundle-root references (`agents/`, `resources/`) resolve.
 
 ### Permissions (V2 rule arrays)
 
@@ -235,7 +246,9 @@ issue rather than publishing a partial state.
 ## First-release scope
 
 - Package: `@giljae/opencode-egm`, first published version `0.0.1`.
-- Register **all seven skills** and nine agents for content parity (decided).
+- Register **all seven skills** and the seven `/egm-*` commands through the
+  plugin, and install **nine agent files** (one primary `egm` orchestrator and
+  eight read-only reviewers) through `/egm-install-agents` (decided).
 - Verification effort concentrates on `egm-review` and the
   brainstorm→draft→review path. `egm-bootstrap` and `egm-drift-report`
   (worker/scout delegation) ship with documented limitations if their required

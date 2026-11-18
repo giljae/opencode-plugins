@@ -268,22 +268,23 @@ git commit -m "feat: register vendored skills as directory-form skills"
 
 ---
 
-### Task 6: Orchestrator prompt and agent registration
+### Task 6: Orchestrator prompt and agent files
 
 **Files:**
 - Create: `packages/opencode-egm/src/orchestrator.ts`, `packages/opencode-egm/src/agents.ts`
 - Test: `packages/opencode-egm/test/orchestrator.test.ts`, `packages/opencode-egm/test/agents.test.ts`
 
 **Interfaces:**
-- Consumes: `listAgents` (Task 3), `reviewerPermissions`, `orchestratorPermissions`, `REVIEWER_IDS` (Task 4), `AgentHost` (Task 5).
+- Consumes: `listAgents` (Task 3), `reviewerPermissions`, `orchestratorPermissions`, `REVIEWER_IDS` (Task 4).
 - Produces:
   - `orchestratorPrompt(bundleDir: string, reviewerIds: readonly string[]): string`
-  - `registerAgents(host: AgentHost, bundleDir: string): Promise<number>` — registers `egm` (mode `primary`) plus 8 reviewers (mode `subagent`), returns 9.
+  - `AgentFile = { name: string; content: string }`
+  - `buildAgentFiles(bundleDir: string): AgentFile[]` — markdown for `egm` (mode `primary`) plus the 8 reviewers (mode `subagent`), 9 files, sorted.
 
 - [ ] **Step 1: Write the failing tests**
 
 `test/orchestrator.test.ts`: the prompt contains the absolute `bundleDir`, the word `subagent`, every reviewer id, and the instruction to keep human approval gates; it does not contain the V1 word `task` as a tool name.
-`test/agents.test.ts`: against a fake `AgentHost`, `registerAgents` adds 9 agents; `egm` has mode `primary` and `orchestratorPermissions`; each reviewer id has mode `subagent`, a non-empty `system`, and `reviewerPermissions`. Add the case that a missing persona file makes `registerAgents` throw rather than register a partial set (Review Focus 1).
+`test/agents.test.ts`: against a temp bundle, `buildAgentFiles` returns 9 files; `egm.md` has `mode: primary`, the orchestrator permissions, the bundle path in the body, and a non-empty system body; each `egm-<reviewer>.md` has `mode: subagent`, the reviewer permissions, and that persona's body. Add the case that a missing persona makes `buildAgentFiles` throw rather than emit a partial set (Review Focus 1).
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -292,7 +293,7 @@ Expected: FAIL — modules not found.
 
 - [ ] **Step 3: Implement `src/orchestrator.ts` and `src/agents.ts`**
 
-`orchestratorPrompt` is a V2-adapted rewrite of upstream's adapter prompt (dispatch with `subagent` and the registered reviewer ids; pass absolute persona, target, and standard paths; fresh session; no parent history; stop when delegation or a required read is missing; keep every approval gate; honor `EGM artifact directory`). `registerAgents` maps `listAgents` output to agent definitions, sets the orchestrator's system prompt from `orchestratorPrompt`, applies the permission arrays from Task 4, and throws if the expected reviewer id set is absent.
+`orchestratorPrompt` is a V2-adapted rewrite of upstream's adapter prompt (dispatch with `subagent` and the registered reviewer ids; pass absolute persona, target, and standard paths; fresh session; no parent history; stop when delegation or a required read is missing; keep every approval gate; honor `EGM artifact directory`). `buildAgentFiles` renders YAML frontmatter (`description`, `mode`, `color`, `permissions` as an ordered list) followed by the system body, and throws when the expected reviewer id set is absent.
 
 - [ ] **Step 4: Run to verify pass, then commit**
 
@@ -301,7 +302,7 @@ Expected: PASS.
 
 ```bash
 git add packages/opencode-egm/src/orchestrator.ts packages/opencode-egm/src/agents.ts packages/opencode-egm/test
-git commit -m "feat: register the egm orchestrator and reviewer subagents"
+git commit -m "feat: render the egm orchestrator and reviewer agent files"
 ```
 
 ---
@@ -343,31 +344,34 @@ git commit -m "feat: register /egm-* commands on the orchestrator"
 
 ---
 
-### Task 8: Plugin entry and full registration
+### Task 8: Plugin entry, agent install command, and full registration
 
 **Files:**
 - Modify: `packages/opencode-egm/src/index.ts` (create the real entry)
-- Create: `packages/opencode-egm/src/setup.ts`
-- Test: `packages/opencode-egm/test/setup.test.ts`
+- Create: `packages/opencode-egm/src/setup.ts`, `packages/opencode-egm/src/install.ts`
+- Test: `packages/opencode-egm/test/setup.test.ts`, `packages/opencode-egm/test/install.test.ts`
 
 **Interfaces:**
-- Consumes: `registerSkills` (Task 5), `registerAgents` (Task 6), `registerCommands` (Task 7), `readUpstreamManifest` and `listSkills`/`listAgents` (Task 3).
+- Consumes: `registerSkills` (Task 5), `registerCommands` (Task 7), `buildAgentFiles` (Task 6), `readUpstreamManifest` (Task 3).
 - Produces:
-  - `runSetup(host: Host, bundleDir: string): Promise<{ skills: number; agents: number; commands: number }>`
+  - `installAgents(files: AgentFile[], targetDir: string): string[]` — writes `<targetDir>/<name>` for each file, returns the written paths.
+  - `registerInstallCommand(host: CommandHost, options: { bundleDir: string; targetDir: string }): Promise<void>`
+  - `runSetup(host: Host, bundleDir: string, targetDir: string): Promise<{ skills: number; commands: number }>`
   - `export default Plugin.define({ id: "egm", async setup(ctx) { ... } })` in `src/index.ts`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing tests**
 
-`test/setup.test.ts` builds a fake `Host` implementing the skill/agent/command transforms, runs `runSetup(host, bundleDir)` against the real vendored `vendor/egm`, and asserts `{ skills: 7, agents: 9, commands: 7 }` and that no duplicate ids were registered. Add a case where `UPSTREAM.json` is missing: `runSetup` throws instead of registering nothing (Review Focus 1).
+`test/install.test.ts`: `installAgents` writes each file into a temp dir and returns the paths; it creates the directory when missing.
+`test/setup.test.ts` builds a fake `Host` implementing the skill/command transforms plus `session.prompt`, runs `runSetup(host, bundleDir, targetDir)` against the real vendored `vendor/egm`, and asserts `{ skills: 7, commands: 7 }` and that the registered command names include `egm-install-agents`. Invoke the install command's `execute` and assert it wrote 9 agent files into the target dir. Add a case where `UPSTREAM.json` is missing: `runSetup` throws instead of registering nothing (Review Focus 1).
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `npx vitest run packages/opencode-egm/test/setup.test.ts`
-Expected: FAIL — module not found.
+Run: `npx vitest run packages/opencode-egm/test/setup.test.ts packages/opencode-egm/test/install.test.ts`
+Expected: FAIL — modules not found.
 
-- [ ] **Step 3: Implement `src/setup.ts` and `src/index.ts`**
+- [ ] **Step 3: Implement `src/install.ts`, `src/setup.ts`, and `src/index.ts`**
 
-`runSetup` resolves `bundleDir` (default `fileURLToPath(new URL("../vendor/egm/", import.meta.url))`), calls `readUpstreamManifest`, then registers skills, agents (with `orchestratorPrompt`), and commands, returning counts. `index.ts` imports `Plugin` from `@opencode/plugin` and delegates to `runSetup`.
+`installAgents` writes the generated agent markdown into the target directory. `registerInstallCommand` adds an `egm-install-agents` command whose `execute` calls `installAgents(buildAgentFiles(bundleDir), targetDir)` and reports the written paths through `session.prompt`. `runSetup` resolves `bundleDir` (default `fileURLToPath(new URL("../vendor/egm/", import.meta.url))` and `targetDir` (default `<ctx.location.directory>/.opencode/agents`), calls `readUpstreamManifest`, registers skills, the seven skill commands, and the install command, returning counts. `index.ts` imports `Plugin` from `@opencode/plugin` and delegates to `runSetup`.
 
 - [ ] **Step 4: Run the full test suite and typecheck**
 
@@ -377,8 +381,8 @@ Expected: PASS, no errors.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/opencode-egm/src/index.ts packages/opencode-egm/src/setup.ts packages/opencode-egm/test/setup.test.ts
-git commit -m "feat: wire the EGM plugin entry point"
+git add packages/opencode-egm/src/index.ts packages/opencode-egm/src/setup.ts packages/opencode-egm/src/install.ts packages/opencode-egm/test
+git commit -m "feat: wire the EGM plugin entry and agent install command"
 ```
 
 ---
@@ -401,7 +405,7 @@ Install the package into a disposable project and start OpenCode with the plugin
 
 1. A directory-form skill exposes `references/` and its base directory; the agent can read `agents/` and `resources/` inside the installed package.
 2. A wildcard-action deny followed by specific allows is enforced on subagents at runtime.
-3. `ctx.agent.transform` accepts `mode: subagent`, a system prompt, and a `permissions` array, and the orchestrator addresses subagents by registered id.
+3. The nine generated agent files placed in `.opencode/agents/` are discovered, the orchestrator addresses subagents by the ids `egm-<reviewer>`, and the reviewer permission frontmatter is enforced at runtime.
 4. `external_directory` behavior for the installed package (often under `node_modules`).
 5. No V1 tool names (`task`) remain in the orchestrator or skill text that would mislead the agent.
 6. Plugin-registered skill precedence against a same-id user skill.
